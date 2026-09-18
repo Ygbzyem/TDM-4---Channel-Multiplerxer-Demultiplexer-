@@ -49,24 +49,9 @@ The system is a single continuous data path (no branching architectures — unli
 ## 3. General Block Diagram
 
 ```
-CH0,CH1,CH2,CH3 (8-bit each)
-        |
-   TDM_COUNTER --> bit_count[4:0], channel_select[1:0]
-        |
-      MUX (combinational)
-        |
- TX SHIFT REG (parallel->serial, MSB-first)
-        |
-   TDM_DATA (1 wire, 1 bit/clock)
-        |
- RX SHIFT REG (serial->parallel, MSB-first)
-        |
-     DEMUX (updates output only when byte_done=1)
-        |
-CH0_OUT,CH1_OUT,CH2_OUT,CH3_OUT
+
 ```
 
-*(Add a rendered diagram image to `image/` and reference it here once available.)*
 
 ---
 
@@ -182,4 +167,4 @@ Vivado synthesis utilization report for `tdm_mux.v`: TODO (run Synthesis in Viva
 - Complete `tdm_counter.v`, `tx_shift_reg.v`, `rx_shift_reg.v`, `tdm_demux.v`, `tdm_top.v`.
 - System-level self-checking testbench + Python golden model comparison.
 - Vivado synthesis/implementation, resource utilization and timing reports for the full system.
-- Final report and presentation slides.
+- Final report and presentation slides. 
