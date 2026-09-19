@@ -73,7 +73,7 @@ TDM-4Channel-Mux-Demux/
 │   ├── tb_tdm_counter.v     # TODO
 │   ├── tb_tx_shift_reg.v    # TODO
 │   ├── tb_rx_shift_reg.v    # TODO
-│   ├── tb_tdm_demux.v       # TODO
+│   ├── tb_tdm_demux.v       # DONE
 │   └── tb_tdm_top.v         # TODO - system-level testbench
 ├── golden_model/            # Python reference model for verification
 │   ├── golden_model.py
@@ -98,20 +98,26 @@ TDM-4Channel-Mux-Demux/
 | 2 | `tdm_mux` | `tdm_mux.v` | Combinational 4-to-1 MUX, selects the active channel's byte. | **DONE** |
 | 3 | `tx_shift_reg` | `tx_shift_reg.v` | Parallel-to-serial shift register, MSB-first. | TODO (open item) |
 | 4 | `rx_shift_reg` | `rx_shift_reg.v` | Serial-to-parallel shift register, MSB-first, generates `byte_done`. | TODO |
-| 5 | `tdm_demux` | `tdm_demux.v` | Routes received byte into the correct `CHx_OUT` register. | TODO |
+| 5 | `tdm_demux` | `tdm_demux.v` | Routes received byte into the correct `CHx_OUT` register. | **DONE** |
 | 6 | `tdm_top` | `tdm_top.v` | Top-level integration of all modules above. | TODO |
 
 ---
 
 ## 6. Interface Specifications
 
-### 6.1 `tdm_mux` (DONE)
+### 6.3 `tdm_mux` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
 | 1 | `CH0`..`CH3` | Input | 8-bit x4 | The 4 parallel input channels |
 | 2 | `channel_select` | Input | 2-bit | 00→CH0, 01→CH1, 10→CH2, 11→CH3 |
 | 3 | `mux_out` | Output | 8-bit | Selected channel's byte (combinational) |
+
+### 6.6 `tdm_demux` (DONE)
+
+| # | Port | Type | Width | Description |
+|---|------|------|-------|-------------|
+
 
 *(Interface tables for the remaining modules will be filled in as each module is completed — see the Master System Specification in `docs/` for the locked interface definitions in the meantime.)*
 
