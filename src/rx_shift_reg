@@ -1,4 +1,4 @@
-module rx_shift_reg (
+module rx_shift_reg(
     input wire       clk,
     input wire       rst,
     input wire       serial_in,
@@ -28,8 +28,7 @@ module rx_shift_reg (
                 };
                 byte_done <= 1'b1;
             end
-        end
-end 
-
+        end   
+    end
 
 endmodule
