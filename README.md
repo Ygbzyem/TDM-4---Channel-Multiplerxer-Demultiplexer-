@@ -94,16 +94,21 @@ TDM-4Channel-Mux-Demux/
 
 | # | Module | File | Role | Status |
 |---|--------|------|------|--------|
-| 1 | `tdm_counter` | `tdm_counter.v` | Generates `bit_count`/`channel_select`, the only timing source in the system. | TODO |
-| 2 | `tdm_mux` | `tdm_mux.v` | Combinational 4-to-1 MUX, selects the active channel's byte. | **DONE** |
-| 3 | `tx_shift_reg` | `tx_shift_reg.v` | Parallel-to-serial shift register, MSB-first. | TODO (open item) |
-| 4 | `rx_shift_reg` | `rx_shift_reg.v` | Serial-to-parallel shift register, MSB-first, generates `byte_done`. | TODO |
-| 5 | `tdm_demux` | `tdm_demux.v` | Routes received byte into the correct `CHx_OUT` register. | **DONE** |
-| 6 | `tdm_top` | `tdm_top.v` | Top-level integration of all modules above. | TODO |
+| 1 | `tdm_top` | `tdm_top.v` | Top-level integration of all modules above. | TODO |
+| 2 | `tdm_counter` | `tdm_counter.v` | Generates `bit_count`/`channel_select`, the only timing source in the system. | TODO |
+| 3 | `tdm_mux` | `tdm_mux.v` | Combinational 4-to-1 MUX, selects the active channel's byte. | **DONE** |
+| 4 | `tx_shift_reg` | `tx_shift_reg.v` | Parallel-to-serial shift register, MSB-first. | TODO (open item) |
+| 5 | `rx_shift_reg` | `rx_shift_reg.v` | Serial-to-parallel shift register, MSB-first, generates `byte_done`. | TODO |
+| 6 | `tdm_demux` | `tdm_demux.v` | Routes received byte into the correct `CHx_OUT` register. | **DONE** |
+
 
 ---
 
 ## 6. Interface Specifications
+
+### 6.1 `tdm_top` (DONE)
+
+### 6.2 `tdm_counter` (DONE)
 
 ### 6.3 `tdm_mux` (DONE)
 
@@ -113,10 +118,36 @@ TDM-4Channel-Mux-Demux/
 | 2 | `channel_select` | Input | 2-bit | 00→CH0, 01→CH1, 10→CH2, 11→CH3 |
 | 3 | `mux_out` | Output | 8-bit | Selected channel's byte (combinational) |
 
+### 6.4 `tx_shift_reg` (DONE)
+
+| # | Port | Type | Width | Description |
+|---|------|------|-------|-------------|
+| 1 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
+| 2 | `mux_out` | Input | 8-bit | Byte to serialize, from `tdm_mux` |
+| 3 | `load` | Input | 1-bit | **Not in the original Master Spec Section 14 list** — added to solve the timing gap flagged in the outline (Section 9). Pulses once per byte to capture `mux_out`. |
+| 4 | `serial_out` | Output | 1-bit | `tx_shift[7]` — current MSB, continuously assigned |
+
+Priority inside the always block: **RESET > LOAD > SHIFT** (matches the header comment in the file).
+
+### 6.5 `rx_shift_reg` (DONE)
+
+| # | Port | Type | Width | Description |
+|---|------|------|-------|-------------|
+| 1 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
+| 2 | `serial_in` | Input | 1-bit | Renamed from the Spec's `serial_data` — **naming deviation, needs team sign-off per Spec Section 27** |
+| 3 | `byte_boundary` | Input | 1-bit | **Not in the original Master Spec Section 17 list** — same role as `load` above, seen from the RX side. |
+| 4 | `rx_data` | Output | 8-bit | Reconstructed byte, MSB-first |
+| 5 | `byte_done` | Output | 1-bit | 1-clock pulse, one cycle after `byte_boundary` was asserted |
+
 ### 6.6 `tdm_demux` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
+ 1 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
+| 2 | `rx_data` | Input | 8-bit | Completed byte from `rx_shift_reg` |
+| 3 | `channel_select` | Input | 2-bit | Which `CHx_OUT` to update |
+| 4 | `byte_done` | Input | 1-bit | Update gate — only writes when high |
+| 5 | `CH0_OUT`..`CH3_OUT` | Output | 8-bit x4 | Reconstructed channels; unselected channels hold their value |
 
 
 *(Interface tables for the remaining modules will be filled in as each module is completed — see the Master System Specification in `docs/` for the locked interface definitions in the meantime.)*
