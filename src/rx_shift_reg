@@ -30,5 +30,6 @@ module rx_shift_reg (
             end
         end
 end 
+end
 
 endmodule
