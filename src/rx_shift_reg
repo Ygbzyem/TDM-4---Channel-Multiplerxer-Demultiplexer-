@@ -29,5 +29,6 @@ module rx_shift_reg (
                 byte_done <= 1'b1;
             end
         end
+end 
 
 endmodule
