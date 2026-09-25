@@ -120,7 +120,20 @@ Once functionally verified, the design is brought into Vivado for synthesis/impl
 
 ### 7.1 `tdm_top` (DONE)
 
+| Port | Direction | Width | Description |
+|---|---|---|---|
+| `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
+| `CH0`..`CH3` | Input | 8-bit x4 | The 4 parallel input channels |
+| `TDM_DATA` | Output | 1-bit | Serialized output line |
+| `CH0_OUT`..`CH3_OUT` | Output | 8-bit x4 | Reconstructed channels |
+
 ### 7.2 `tdm_counter` (DONE)
+
+| Port | Direction | Width | Description |
+|---|---|---|---|
+| `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
+| `bit_count` | Output | 5-bit | Free-running 0→31→0 counter, sole timing source of the system |
+| `channel_select` | Output | 2-bit | `bit_count[4:3]`, raw/unregistered — not fed directly to `tdm_mux`/`tdm_demux`; see Section 6.3 |
 
 ### 7.3 `tdm_mux` (DONE)
 
