@@ -49,6 +49,7 @@ The system is a single continuous data path (no branching architectures — unli
 ## 3. General Block Diagram
 
 ```
+![System Block Diagram](image/Project_diagram.png)
 
 ```
 
