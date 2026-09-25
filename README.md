@@ -24,9 +24,9 @@ This project implements a **4-Channel Time Division Multiplexing (TDM) Multiplex
 * [General Block Diagram](#3-general-block-diagram)
 * [Repository Structure](#4-repository-structure)
 * [Module Index](#5-module-index)
-* [Interface Specifications](#6-interface-specifications)
-* [System Workflow](#7-system-workflow)
-* [Experimental Results](#8-experimental-results)
+* [System Workflow](#6-system-workflow)
+* [Interface Specifications](#7-interface-specifications)
+* [Verification Summary](#8-verification-summary)
 * [Known Open Items](#9-known-open-items)
 * [Limitations](#10-limitations)
 * [Future Work](#11-future-work)
@@ -51,7 +51,7 @@ The system is a single continuous data path (no branching architectures — unli
 
 ![System Block Diagram](image/Project_diagram.png)
 
-
+*Data flow: CH0–CH3 → `tdm_mux` (combinational) → `tx_shift_reg` (parallel→serial, MSB-first) → serial `TDM_DATA` → `rx_shift_reg` (serial→parallel, MSB-first) → `tdm_demux` (updates output only when `byte_done=1`) → CH0_OUT–CH3_OUT, all timed off the single `tdm_counter`. The exact phase relationship between `bit_count` and `channel_select`/`load`/`byte_boundary` — handled inside `tdm_top`'s glue layer — is documented in [Section 6](#6-system-workflow) and [Section 9](#9-known-open-items).*
 ---
 
 ## 4. Repository Structure
@@ -103,13 +103,26 @@ TDM-4Channel-Mux-Demux/
 
 ---
 
-## 6. Interface Specifications
+## 6. System Workflow
 
-### 6.1 `tdm_top` (DONE)
+### 1. Design Stage
+Each member implements exactly one assigned module, following the interface/timing/protocol locked in `docs/`'s Master System Specification. Coding style (case vs if/else) may differ between members; interface and behavior must not.
 
-### 6.2 `tdm_counter` (DONE)
+### 2. Verification Stage
+Each module gets its own self-checking testbench (see `tb_tdm_mux.v` as the reference pattern) before integration. After all 5 sub-modules pass individually, `tdm_top.v` is assembled and re-verified as a whole system against the integration checklist (Master Spec Section 32), then cross-checked against the Python golden model.
 
-### 6.3 `tdm_mux` (DONE)
+### 3. Synthesis Stage
+Once functionally verified, the design is brought into Vivado for synthesis/implementation, using `constraints/constraints.xdc` for clock definition, to obtain the Utilization Report (LUT/FF/BRAM/DSP) and Timing Report.
+
+---
+
+## 7. Interface Specifications
+
+### 7.1 `tdm_top` (DONE)
+
+### 7.2 `tdm_counter` (DONE)
+
+### 7.3 `tdm_mux` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
@@ -117,7 +130,7 @@ TDM-4Channel-Mux-Demux/
 | 2 | `channel_select` | Input | 2-bit | 00→CH0, 01→CH1, 10→CH2, 11→CH3 |
 | 3 | `mux_out` | Output | 8-bit | Selected channel's byte (combinational) |
 
-### 6.4 `tx_shift_reg` (DONE)
+### 7.4 `tx_shift_reg` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
@@ -128,7 +141,7 @@ TDM-4Channel-Mux-Demux/
 
 Priority inside the always block: **RESET > LOAD > SHIFT** (matches the header comment in the file).
 
-### 6.5 `rx_shift_reg` (DONE)
+### 7.5 `rx_shift_reg` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
@@ -138,7 +151,7 @@ Priority inside the always block: **RESET > LOAD > SHIFT** (matches the header c
 | 4 | `rx_data` | Output | 8-bit | Reconstructed byte, MSB-first |
 | 5 | `byte_done` | Output | 1-bit | 1-clock pulse, one cycle after `byte_boundary` was asserted |
 
-### 6.6 `tdm_demux` (DONE)
+### 7.6 `tdm_demux` (DONE)
 
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
@@ -153,54 +166,49 @@ Priority inside the always block: **RESET > LOAD > SHIFT** (matches the header c
 
 ---
 
-## 7. System Workflow
+## 8. Verification Summary
 
-### 1. Design Stage
-Each member implements exactly one assigned module, following the interface/timing/protocol locked in `docs/`'s Master System Specification. Coding style (case vs if/else) may differ between members; interface and behavior must not.
+All RTL modules pass their self-checking testbenches under Icarus Verilog, both standalone and as the full integrated `tdm_top` system: **126/126 checks passed, 0 failures**, across `tdm_counter`, `tdm_mux`, `tx_shift_reg`, `rx_shift_reg`, `tdm_demux`, the pre-`tdm_top` datapath integration test, and `tb_tdm_top.v` — the full system-level testbench, which itself has 3 layers:
 
-### 2. Verification Stage
-Each module gets its own self-checking testbench (see `tb_tdm_mux.v` as the reference pattern) before integration. After all 5 sub-modules pass individually, `tdm_top.v` is assembled and re-verified as a whole system against the integration checklist (Master Spec Section 32), then cross-checked against the Python golden model.
+1. **Round-trip per frame** — drive `CH0`–`CH3`, let the pipeline settle, check `CH0_OUT`–`CH3_OUT`, across several frames including boundary values (`0x00`/`0xFF`) and a mid-stream reset.
+2. **Bit-level check on `TDM_DATA`** — sample all 32 serial bits of one frame directly off the wire (synchronized to `bit_count == 0`) and compare against the exact expected MSB-first sequence, so a TX-side and RX-side bug that happened to cancel out wouldn't slip past a round-trip-only check.
+3. **Randomized regression** — 20 back-to-back frames of `$random` channel data, each checked automatically.
 
-### 3. Synthesis Stage
-Once functionally verified, the design is brought into Vivado for synthesis/implementation, using `constraints/constraints.xdc` for clock definition, to obtain the Utilization Report (LUT/FF/BRAM/DSP) and Timing Report.
-
----
-
-## 8. Experimental Results
-
-*(To be filled in as each module is synthesized. `tdm_mux.v`'s functional simulation result:)*
-
-**`tdm_mux.v` — Icarus Verilog simulation**
-
-| Test group | Cases | Result |
-|---|---|---|
-| Channel_select mapping sweep (00/01/10/11) | 4 | PASS |
-| Combinational tracking (input changes while select fixed) | 3 | PASS |
-| Fast select switching | 5 | PASS |
-| Boundary values (0x00, 0xFF) | 2 | PASS |
-| **Total** | **14** | **14/14 PASS** |
-
-Vivado synthesis utilization report for `tdm_mux.v`: TODO (run Synthesis in Vivado, export to `results/tdm_mux/`).
+Vivado synthesis utilization/timing reports: TODO (pending — run Synthesis in Vivado, export to `results/`).
 
 ---
 
 ## 9. Known Open Items
 
-- **`tx_shift_reg.v` interface gap:** Master Spec Section 14 lists only `clk, rst, mux_out[7:0] → serial_data` as the interface, but Section 15 requires TX to load a new byte exactly when `bit_count = 0/8/16/24`. No module may create its own frame counter (Section 9/30), so `tx_shift_reg` needs an explicit timing input from `tdm_counter` (either the raw `bit_count[4:0]`, or a derived 1-bit `load` pulse). **Needs team confirmation and a spec update before this module is coded.**
-- `rx_shift_reg.v` likely needs a similar internal 3-bit bit-in-byte counter (0–7) to know when to assert `byte_done` — confirm this does not count as a disallowed "frame counter" (Section 9/30) since it only tracks position within one byte, not the frame.
+### 9.1 RESOLVED — `tx_shift_reg` / `rx_shift_reg` timing input gap
+The Master Spec's original port list for `tx_shift_reg`/`rx_shift_reg` didn't include a timing input, even though a byte must be loaded/captured exactly at byte boundaries. The team resolved this by adding `load` (to `tx_shift_reg`) and `byte_boundary` (to `rx_shift_reg`) as new input ports. **Valid resolution, but still needs to be written back into the Master System Specification per Section 27.**
+
+### 9.2 OPEN — where the timing glue layer should live
+The verified contract in Section 6.3 (look-ahead `mux_select`, `load`/`byte_boundary` at `bit_count[2:0]==7`, delayed `demux_select`) currently lives inside `tdm_top.v`, reading only `tdm_counter`'s unmodified outputs. This was chosen so no other member's module needed to change. The alternative — moving this logic into `tdm_counter.v` itself, since it is the system's single timing source — would be architecturally cleaner but requires the counter's author to update it and the spec to be revised (Section 27). **Needs team confirmation on which option to keep permanently.**
+
+### 9.3 `rx_shift_reg.v` had a syntax bug — fixed
+The version originally written was missing one `end` (the `else` block inside the clocked `always` was never closed), so it failed to compile. Fixed by closing the block properly; behavior is otherwise unchanged from what was written.
+
+### 9.4 Naming deviation
+`rx_shift_reg.v`'s serial input port is named `serial_in`; the Master Spec names it `serial_data`. Functionally identical, but Section 27 requires port renames to go through team confirmation + spec update, not be done silently.
+
+### 9.5 OPEN — target clock frequency
+No target clock frequency is specified anywhere in the Master Spec. `constraints/constraints.xdc` currently uses a placeholder 100 MHz (10 ns period) purely so synthesis can be exercised — **needs the team to confirm a real target frequency** once a board is chosen.
 
 ---
 
 ## 10. Limitations
 
-- Verified via RTL simulation (Icarus Verilog / ModelSim / Vivado XSIM) only; not yet synthesized/implemented on physical FPGA hardware.
+- Verified via RTL simulation (Icarus Verilog) only; not yet run on ModelSim or Vivado XSIM, and not yet synthesized/implemented on physical FPGA hardware.
 - No FSM by design (locked in spec); any future upgrade path would need explicit team sign-off per Section 28.
+- `constraints.xdc` has no board-specific pin assignments yet (Section 9.5).
 
 ---
 
 ## 11. Future Work
 
-- Complete `tdm_counter.v`, `tx_shift_reg.v`, `rx_shift_reg.v`, `tdm_demux.v`, `tdm_top.v`.
-- System-level self-checking testbench + Python golden model comparison.
+- Update the Master System Specification with the confirmed interface/timing changes (Section 9.1, 9.2) and the naming deviation (Section 9.4).
+- Confirm a target clock frequency and finalize `constraints.xdc` (Section 9.5), and add board-specific pin constraints once a target board is chosen.
+- Python golden model + automated comparison log.
 - Vivado synthesis/implementation, resource utilization and timing reports for the full system.
-- Final report and presentation slides. 
+- Final report and presentation slides.
