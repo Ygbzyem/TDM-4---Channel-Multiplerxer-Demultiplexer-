@@ -52,6 +52,7 @@ The system is a single continuous data path (no branching architectures — unli
 ![System Block Diagram](image/Project_diagram.png)
 
 *Data flow: CH0–CH3 → `tdm_mux` (combinational) → `tx_shift_reg` (parallel→serial, MSB-first) → serial `TDM_DATA` → `rx_shift_reg` (serial→parallel, MSB-first) → `tdm_demux` (updates output only when `byte_done=1`) → CH0_OUT–CH3_OUT, all timed off the single `tdm_counter`. The exact phase relationship between `bit_count` and `channel_select`/`load`/`byte_boundary` — handled inside `tdm_top`'s glue layer — is documented in [Section 6](#6-system-workflow) and [Section 9](#9-known-open-items).*
+
 ---
 
 ## 4. Repository Structure
