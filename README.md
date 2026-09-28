@@ -167,6 +167,8 @@ Priority inside the always block: **RESET > LOAD > SHIFT** (matches the header c
 
 ### 7.6 `tdm_demux` (DONE)
 
+![Demux Diagram](image/tdm_demux.png)
+
 | # | Port | Type | Width | Description |
 |---|------|------|-------|-------------|
  1 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
