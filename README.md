@@ -60,21 +60,21 @@ The system is a single continuous data path (no branching architectures — unli
 ```
 TDM-4Channel-Mux-Demux/
 ├── src/
-│   ├── tdm_counter.v        # TODO
+│   ├── tdm_counter.v        # DONE
 │   ├── tdm_mux.v            # DONE
-│   ├── tx_shift_reg.v       # TODO - has open item, see Section 9
-│   ├── rx_shift_reg.v       # TODO
-│   ├── tdm_demux.v          # TODO
-│   └── tdm_top.v            # TODO (integration, after all modules above)
+│   ├── tx_shift_reg.v       # DONE
+│   ├── rx_shift_reg.v       # DONE
+│   ├── tdm_demux.v          # DONE
+│   └── tdm_top.v            # DONE
 ├── constraints/
-│   └── constraints.xdc      # TODO - clock constraint added once tdm_top is ready
+│   └── constraints.xdc      # DONE
 ├── testbench/
-│   ├── tb_tdm_mux.v         # DONE - self-checking, 14/14 PASS
-│   ├── tb_tdm_counter.v     # TODO
-│   ├── tb_tx_shift_reg.v    # TODO
-│   ├── tb_rx_shift_reg.v    # TODO
+│   ├── tb_tdm_mux.v         # DONE 
+│   ├── tb_tdm_counter.v     # DONE
+│   ├── tb_tx_shift_reg.v    # DONE
+│   ├── tb_rx_shift_reg.v    # DONE
 │   ├── tb_tdm_demux.v       # DONE
-│   └── tb_tdm_top.v         # TODO - system-level testbench
+│   └── tb_tdm_top.v         # DONE
 ├── golden_model/            # Python reference model for verification
 │   ├── golden_model.py
 │   ├── compare_output.py
