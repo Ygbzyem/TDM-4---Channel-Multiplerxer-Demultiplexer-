@@ -1,0 +1,221 @@
+// =============================================================
+// Testbench cho tdm_top.v - TESTBENCH TOAN HE THONG (system-level)
+//
+// Day la testbench cho CA MO HINH tdm_top that (tdm_counter that +
+// glue layer that, khong con gia lap gi ca). Gom 3 lop kiem tra:
+//
+//   PHAN 1 - Round-trip theo tung frame (nhu ban cu):
+//     dua CH0..CH3 vao dau vao, cho pipeline on dinh, kiem tra
+//     CH0_OUT..CH3_OUT phai khop CH0..CH3. Gom nhieu frame doi gia
+//     tri + gia tri bien (0x00/0xFF) + 1 lan reset giua chung.
+//
+//   PHAN 2 - Kiem tra tung BIT tren day TDM_DATA (khong chi ket
+//     qua cuoi):
+//     bat dau dung luc bit_count=0 (dung dau frame, truy cap noi
+//     bo qua DUT.u_counter.bit_count de dong bo), lay mau 32 bit
+//     lien tiep tren TDM_DATA, so voi chuoi bit ky vong
+//     {CH0,CH1,CH2,CH3} (MSB-first tung byte, dung thu tu kenh).
+//     Day la cach kiem tra manh hon round-trip don thuan, vi neu
+//     loi o TX va loi o RX vo tinh "trung" nhau thi round-trip van
+//     co the PASS gia - kiem tra bit tren day se bat duoc.
+//
+//   PHAN 3 - Random regression nhieu frame:
+//     sinh ngau nhien CH0..CH3 qua 20 frame lien tiep, tu dong
+//     kiem tra CH0_OUT..CH3_OUT sau moi frame - mo phong dieu kien
+//     hoat dong lien tuc, khong chi vai gia tri co dinh.
+//
+// -------------------------------------------------------------
+// FIX (quan trong): moi lan doi "rst" tu 1 xuong 0 ngay sau
+// "repeat (N) @(posedge clk);" deu duoc them 1 dong "#1;" truoc
+// khi gan rst = 0. Neu khong co "#1" nay, viec doi rst xay ra
+// DUNG TAI cung 1 thoi diem mo phong voi canh clock cuoi cung ma
+// tdm_counter/tx_shift_reg dung de doc rst - day la mot RACE
+// CONDITION hop le theo chuan Verilog (nhieu process cung nhay
+// voi 1 canh clock, thu tu chay khong duoc dam bao). Icarus
+// Verilog vo tinh xu ly rox nay theo huong "an toan" (DUT doc
+// dung rst=1), nhung Vivado XSIM co the xu ly khac di, khien DUT
+// doc nham rst da ve 0 dung luc do -> buoc preload CH0 trong
+// tx_shift_reg mat tac dung dung 1 nhip -> byte hop le dau tien
+// thuc su di ra lai la cua CH1 thay vi CH0 (da kiem chung: chay
+// dung testbench nay tren Icarus thi CH0 ra truoc, nhung tren
+// Vivado XSIM lai thay CH1 ra truoc - chinh la trieu chung nay).
+// Them "#1;" dam bao lenh doi rst chi thuc hien SAU KHI canh
+// clock do da hoan toan on dinh (qua vung NBA update), loai bo
+// hoan toan su phu thuoc vao thu tu xu ly noi bo cua tung
+// simulator.
+// =============================================================
+`timescale 1ns/1ps
+
+module tb_tdm_top;
+
+    reg clk = 0;
+    reg rst;
+    reg [7:0] CH0, CH1, CH2, CH3;
+    wire       TDM_DATA;
+    wire [7:0] CH0_OUT, CH1_OUT, CH2_OUT, CH3_OUT;
+
+    integer errors = 0;
+    integer checks = 0;
+
+    always #5 clk = ~clk;
+
+    tdm_top DUT (
+        .clk      (clk),
+        .rst      (rst),
+        .CH0      (CH0),
+        .CH1      (CH1),
+        .CH2      (CH2),
+        .CH3      (CH3),
+        .TDM_DATA (TDM_DATA),
+        .CH0_OUT  (CH0_OUT),
+        .CH1_OUT  (CH1_OUT),
+        .CH2_OUT  (CH2_OUT),
+        .CH3_OUT  (CH3_OUT)
+    );
+
+    task check_channel(input [7:0] expected, input [7:0] actual, input [255:0] label);
+        begin
+            checks = checks + 1;
+            if (expected !== actual) begin
+                $display("[FAIL] %0s : expected=%h actual=%h", label, expected, actual);
+                errors = errors + 1;
+            end else begin
+                $display("[PASS] %0s : %h", label, actual);
+            end
+        end
+    endtask
+
+    // -----------------------------------------------------------
+    // PHAN 2 helper: bat dung luc bit_count=0 roi lay mau 32 bit
+    // tren TDM_DATA. Dung hierarchical reference (chi trong
+    // testbench, khong tong hop) de doc bit_count noi bo cua
+    // tdm_counter ben trong DUT, phuc vu dong bo lay mau - khong
+    // anh huong RTL.
+    // -----------------------------------------------------------
+    reg [31:0] captured_frame;
+    integer k;
+
+    task capture_and_check_serial_frame(input [7:0] e0, e1, e2, e3, input [255:0] label);
+        begin
+            // cho den dung luc bat dau 1 frame moi (bit_count=0)
+            while (DUT.u_counter.bit_count !== 5'd0) @(posedge clk);
+            captured_frame = 32'h0;
+            for (k = 0; k < 32; k = k + 1) begin
+                captured_frame = {captured_frame[30:0], TDM_DATA};
+                @(posedge clk);
+            end
+            checks = checks + 1;
+            if (captured_frame !== {e0, e1, e2, e3}) begin
+                $display("[FAIL] %0s : TDM_DATA 32-bit thu duoc=%h (ky vong %h = {%h,%h,%h,%h})",
+                          label, captured_frame, {e0,e1,e2,e3}, e0, e1, e2, e3);
+                errors = errors + 1;
+            end else begin
+                $display("[PASS] %0s : TDM_DATA 32-bit dung tung bit = %h", label, captured_frame);
+            end
+        end
+    endtask
+
+    // -----------------------------------------------------------
+    // PHAN 3 helper: 1 frame random, cho on dinh, kiem tra round-trip
+    // -----------------------------------------------------------
+    task run_random_frame(input integer frame_no);
+        begin
+            CH0 = $random; CH1 = $random; CH2 = $random; CH3 = $random;
+            repeat (48) @(posedge clk);
+            checks = checks + 1;
+            if (CH0_OUT !== CH0 || CH1_OUT !== CH1 || CH2_OUT !== CH2 || CH3_OUT !== CH3) begin
+                $display("[FAIL] RANDOM frame #%0d : in={%h,%h,%h,%h} out={%h,%h,%h,%h}",
+                          frame_no, CH0, CH1, CH2, CH3, CH0_OUT, CH1_OUT, CH2_OUT, CH3_OUT);
+                errors = errors + 1;
+            end else begin
+                $display("[PASS] RANDOM frame #%0d : {%h,%h,%h,%h}", frame_no, CH0, CH1, CH2, CH3);
+            end
+        end
+    endtask
+
+    integer f;
+
+    initial begin
+        $dumpfile("tb_tdm_top.vcd");
+        $dumpvars(0, tb_tdm_top);
+
+        // =========================================================
+        // PHAN 1 - round-trip theo frame
+        // =========================================================
+        $display("======================================================");
+        $display(" PHAN 1: round-trip CH_OUT theo tung frame");
+        $display("======================================================");
+
+        rst = 1;
+        CH0 = 8'hA5; CH1 = 8'h3C; CH2 = 8'hF0; CH3 = 8'h5A;
+        repeat (2) @(posedge clk);
+        #1;                 // FIX: tranh race luc doi rst (xem comment dau file)
+        rst = 0;
+
+        repeat (64) @(posedge clk);
+        check_channel(CH0, CH0_OUT, "WARM - CH0_OUT");
+        check_channel(CH1, CH1_OUT, "WARM - CH1_OUT");
+        check_channel(CH2, CH2_OUT, "WARM - CH2_OUT");
+        check_channel(CH3, CH3_OUT, "WARM - CH3_OUT");
+
+        CH0 = 8'h11; CH1 = 8'h22; CH2 = 8'h33; CH3 = 8'h44;
+        repeat (64) @(posedge clk);
+        check_channel(CH0, CH0_OUT, "F2 - CH0_OUT");
+        check_channel(CH1, CH1_OUT, "F2 - CH1_OUT");
+        check_channel(CH2, CH2_OUT, "F2 - CH2_OUT");
+        check_channel(CH3, CH3_OUT, "F2 - CH3_OUT");
+
+        CH0 = 8'h00; CH1 = 8'hFF; CH2 = 8'h01; CH3 = 8'h80;
+        repeat (64) @(posedge clk);
+        check_channel(CH0, CH0_OUT, "F3(bien) - CH0_OUT");
+        check_channel(CH1, CH1_OUT, "F3(bien) - CH1_OUT");
+        check_channel(CH2, CH2_OUT, "F3(bien) - CH2_OUT");
+        check_channel(CH3, CH3_OUT, "F3(bien) - CH3_OUT");
+
+        rst = 1;
+        repeat (2) @(posedge clk);
+        #1;                 // FIX: tranh race luc doi rst (xem comment dau file)
+        rst = 0;
+        CH0 = 8'h55; CH1 = 8'h66; CH2 = 8'h77; CH3 = 8'h88;
+        repeat (64) @(posedge clk);
+        check_channel(CH0, CH0_OUT, "sau reset giua chung - CH0_OUT");
+        check_channel(CH1, CH1_OUT, "sau reset giua chung - CH1_OUT");
+        check_channel(CH2, CH2_OUT, "sau reset giua chung - CH2_OUT");
+        check_channel(CH3, CH3_OUT, "sau reset giua chung - CH3_OUT");
+
+        // =========================================================
+        // PHAN 2 - kiem tra tung bit tren TDM_DATA
+        // =========================================================
+        $display("======================================================");
+        $display(" PHAN 2: kiem tra tung bit tren TDM_DATA (32 bit/frame)");
+        $display("======================================================");
+
+        CH0 = 8'hA5; CH1 = 8'h3C; CH2 = 8'hF0; CH3 = 8'h5A;
+        repeat (64) @(posedge clk);  // giu on dinh >=2 frame truoc khi bat dau lay mau
+        capture_and_check_serial_frame(CH0, CH1, CH2, CH3, "bit-check frame 1 (A5/3C/F0/5A)");
+
+        CH0 = 8'h00; CH1 = 8'hFF; CH2 = 8'h81; CH3 = 8'h7E;
+        repeat (64) @(posedge clk);
+        capture_and_check_serial_frame(CH0, CH1, CH2, CH3, "bit-check frame 2 (bien: 00/FF/81/7E)");
+
+        // =========================================================
+        // PHAN 3 - random regression nhieu frame
+        // =========================================================
+        $display("======================================================");
+        $display(" PHAN 3: random regression - 20 frame ngau nhien");
+        $display("======================================================");
+
+        for (f = 1; f <= 20; f = f + 1)
+            run_random_frame(f);
+
+        // =========================================================
+        $display("======================================================");
+        $display(" TONG KET: %0d check, %0d loi", checks, errors);
+        if (errors == 0) $display(" >>> TAT CA TEST PASSED");
+        else              $display(" >>> CO %0d TEST FAILED", errors);
+        $display("======================================================");
+
+        $finish;
+    end
+
+endmodule
