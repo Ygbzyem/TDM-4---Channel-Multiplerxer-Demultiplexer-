@@ -184,7 +184,7 @@ Priority inside the always block: **RESET > LOAD > SHIFT**. On reset, `tx_shift`
 | Port | Direction | Width | Description |
 |---|---|---|---|
 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
-| `serial_in` | Input | 1-bit | Serial bit sampled once per clock |
+| `serial_data` | Input | 1-bit | Serial bit sampled once per clock |
 | `byte_boundary` | Input | 1-bit | Same role as `load` above, seen from the RX side |
 | `rx_data` | Output | 8-bit | Reconstructed byte, MSB-first |
 | `byte_done` | Output | 1-bit | 1-clock pulse, one cycle after `byte_boundary` was asserted |
