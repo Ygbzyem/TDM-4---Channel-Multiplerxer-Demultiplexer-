@@ -181,7 +181,7 @@ Priority inside the always block: **RESET > LOAD > SHIFT**. On reset, `tx_shift`
 
 ### 7.4 `rx_shift_reg`
 
-(image/rx_shift_reg.png)
+![rx_shift_reg block diagram](image/rx_shift_reg.png)
 
 | Port | Direction | Width | Description |
 |---|---|---|---|
