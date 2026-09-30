@@ -152,6 +152,8 @@ The design was brought into Xilinx Vivado for synthesis using `constraints/const
 
 ### 7.1 `tdm_counter`
 
+![TDM Counter block diagram](image/tdm_counter.png)
+
 | Port | Direction | Width | Description |
 |---|---|---|---|
 | `clk`, `rst` | Input | 1-bit | Shared clock, synchronous active-high reset |
