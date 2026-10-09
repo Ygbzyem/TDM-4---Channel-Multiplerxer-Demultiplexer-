@@ -1,0 +1,8 @@
+# Simulation outputs
+sim
+rtl_output.txt
+*.vcd
+
+# Python cache
+__pycache__/
+*.pyc

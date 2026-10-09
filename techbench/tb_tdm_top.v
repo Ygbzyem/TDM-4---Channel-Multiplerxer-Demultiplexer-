@@ -10,6 +10,7 @@ module tb_tdm_top;
 
     integer errors = 0;
     integer checks = 0;
+    integer fp;
 
     always #5 clk = ~clk;
 
@@ -49,25 +50,64 @@ module tb_tdm_top;
     reg [31:0] captured_frame;
     integer k;
 
-    task capture_and_check_serial_frame(input [7:0] e0, e1, e2, e3, input [255:0] label);
-        begin
-            // cho den dung luc bat dau 1 frame moi (bit_count=0)
-            while (DUT.u_counter.bit_count !== 5'd0) @(posedge clk);
-            captured_frame = 32'h0;
-            for (k = 0; k < 32; k = k + 1) begin
-                captured_frame = {captured_frame[30:0], TDM_DATA};
-                @(posedge clk);
-            end
-            checks = checks + 1;
-            if (captured_frame !== {e0, e1, e2, e3}) begin
-                $display("[FAIL] %0s : TDM_DATA 32-bit thu duoc=%h (ky vong %h = {%h,%h,%h,%h})",
-                          label, captured_frame, {e0,e1,e2,e3}, e0, e1, e2, e3);
-                errors = errors + 1;
-            end else begin
-                $display("[PASS] %0s : TDM_DATA 32-bit dung tung bit = %h", label, captured_frame);
-            end
-        end
-    endtask
+    task capture_and_check_serial_frame(
+    input [7:0] e0,
+    input [7:0] e1,
+    input [7:0] e2,
+    input [7:0] e3,
+    input [255:0] label
+);
+
+begin
+
+    while (DUT.u_counter.bit_count !== 5'd0)
+        @(posedge clk);
+
+    captured_frame = 32'h0;
+
+    for (k = 0; k < 32; k = k + 1) begin
+
+        captured_frame = {
+            captured_frame[30:0],
+            TDM_DATA
+        };
+
+        $fwrite(fp, "%b", TDM_DATA);
+
+        @(posedge clk);
+
+    end
+
+    $fwrite(fp, "\n");
+
+    checks = checks + 1;
+
+    if (captured_frame !== {e0,e1,e2,e3}) begin
+
+        $display(
+            "[FAIL] %0s : TDM_DATA=%h expected=%h",
+            label,
+            captured_frame,
+            {e0,e1,e2,e3}
+        );
+
+        errors = errors + 1;
+
+    end
+    else begin
+
+        $display(
+            "[PASS] %0s : TDM_DATA=%h",
+            label,
+            captured_frame
+        );
+
+    end
+
+end
+
+endtask
+
 
     // -----------------------------------------------------------
     // PHAN 3 helper: 1 frame random, cho on dinh, kiem tra round-trip
@@ -92,6 +132,12 @@ module tb_tdm_top;
     initial begin
         $dumpfile("tb_tdm_top.vcd");
         $dumpvars(0, tb_tdm_top);
+        fp = $fopen("rtl_output.txt", "w");
+
+if (fp == 0) begin
+    $display("ERROR: cannot open rtl_output.txt");
+    $finish;
+end
 
         // =========================================================
         // PHAN 1 - round-trip theo frame
@@ -168,7 +214,7 @@ module tb_tdm_top;
         if (errors == 0) $display(" >>> TAT CA TEST PASSED");
         else              $display(" >>> CO %0d TEST FAILED", errors);
         $display("======================================================");
-
+        $fclose(fp);
         $finish;
     end
 
