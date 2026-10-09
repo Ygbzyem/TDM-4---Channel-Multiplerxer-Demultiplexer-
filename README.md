@@ -94,6 +94,7 @@ TDM-4Channel-Mux-Demux/
 │   ├── tdm_mux/
 │   └── tdm_top/
 ├── image/                   # Block diagrams, waveform screenshots
+├── input/                   # Input Vectors File
 ├── docs/                    # Per-module technical write-ups
 ├── LICENSE
 └── README.md
