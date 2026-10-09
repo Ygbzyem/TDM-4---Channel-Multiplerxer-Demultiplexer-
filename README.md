@@ -162,6 +162,8 @@ The design was brought into Xilinx Vivado for synthesis using `constraints/const
 
 ### 7.2 `tdm_mux`
 
+![tdm_mux block diagram](image/tdm_mux.png)
+
 | Port | Direction | Width | Description |
 |---|---|---|---|
 | `CH0`..`CH3` | Input | 8-bit x4 | The 4 parallel input channels |
@@ -169,6 +171,8 @@ The design was brought into Xilinx Vivado for synthesis using `constraints/const
 | `mux_out` | Output | 8-bit | Selected channel's byte (combinational) |
 
 ### 7.3 `tx_shift_reg`
+
+![tx_shift_reg block diagram](image/tx_shift_reg.png)
 
 | Port | Direction | Width | Description |
 |---|---|---|---|
@@ -192,6 +196,8 @@ Priority inside the always block: **RESET > LOAD > SHIFT**. On reset, `tx_shift`
 | `byte_done` | Output | 1-bit | 1-clock pulse, one cycle after `byte_boundary` was asserted |
 
 ### 7.5 `tdm_demux`
+
+![tdm_demux block diagram](image/tdm_demux.png)
 
 | Port | Direction | Width | Description |
 |---|---|---|---|
