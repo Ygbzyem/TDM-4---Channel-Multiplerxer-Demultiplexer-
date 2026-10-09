@@ -115,7 +115,7 @@ endtask
     task run_random_frame(input integer frame_no);
         begin
             CH0 = $random; CH1 = $random; CH2 = $random; CH3 = $random;
-            repeat (48) @(posedge clk);
+            repeat (64) @(posedge clk);
             checks = checks + 1;
             if (CH0_OUT !== CH0 || CH1_OUT !== CH1 || CH2_OUT !== CH2 || CH3_OUT !== CH3) begin
                 $display("[FAIL] RANDOM frame #%0d : in={%h,%h,%h,%h} out={%h,%h,%h,%h}",
