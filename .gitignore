@@ -1,7 +1,8 @@
-# Simulation outputs
+# Simulation
 sim
-rtl_output.txt
+sim_filebased
 *.vcd
+rtl_output.txt
 
 # Python cache
 __pycache__/

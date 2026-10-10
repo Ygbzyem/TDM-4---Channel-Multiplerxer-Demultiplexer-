@@ -79,8 +79,11 @@ module tb_tdm_top_filebased;
     parameter MAX_VECTORS   = 256;
     parameter SETTLE_CYCLES = 64;   // multiple of 32 -> deterministic sampling phase
     parameter SYNC_BIT_COUNT = 24;
-    parameter INPUT_FILE    = "C:/Users/tungd/OneDrive/Desktop/TDM/input_vectors.hex";           duong link file input
-    parameter OUTPUT_FILE   = "C:/Users/tungd/OneDrive/Desktop/TDM/rtl_output_vectors.hex";      duong link xuat file output
+    
+    parameter INPUT_FILE =
+    "input/input_vectors.hex";
+    parameter OUTPUT_FILE =
+    "golden_model/verification_logs/rtl_output_vectors.hex";
 
     reg clk = 0;
     reg rst;
